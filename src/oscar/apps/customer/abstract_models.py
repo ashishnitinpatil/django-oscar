@@ -1,20 +1,21 @@
-import hashlib
-import random
-
 from django.conf import settings
 from django.contrib.auth import models as auth_models
-from django.core.urlresolvers import reverse
 from django.core.validators import RegexValidator
 from django.db import models
 from django.template import TemplateDoesNotExist, engines
 from django.template.loader import get_template
+from django.urls import reverse
 from django.utils import six, timezone
+from django.utils.crypto import get_random_string
 from django.utils.encoding import python_2_unicode_compatible
 from django.utils.translation import ugettext_lazy as _
 
-from oscar.apps.customer.managers import CommunicationTypeManager
 from oscar.core.compat import AUTH_USER_MODEL
+from oscar.core.loading import get_class
 from oscar.models.fields import AutoSlugField
+
+
+CommunicationTypeManager = get_class('customer.managers', 'CommunicationTypeManager')
 
 
 class UserManager(auth_models.BaseUserManager):
@@ -430,15 +431,10 @@ class AbstractProductAlert(models.Model):
         return super(AbstractProductAlert, self).save(*args, **kwargs)
 
     def get_random_key(self):
-        """
-        Get a random generated key based on SHA-1 and email address
-        """
-        salt = hashlib.sha1(str(random.random()).encode('utf8')).hexdigest()
-        return hashlib.sha1((salt + self.email).encode('utf8')).hexdigest()
+        return get_random_string(length=40, allowed_chars='abcdefghijklmnopqrstuvwxyz0123456789')
 
     def get_confirm_url(self):
         return reverse('customer:alerts-confirm', kwargs={'key': self.key})
 
     def get_cancel_url(self):
-        return reverse('customer:alerts-cancel-by-key', kwargs={'key':
-                                                                self.key})
+        return reverse('customer:alerts-cancel-by-key', kwargs={'key': self.key})

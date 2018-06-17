@@ -1,6 +1,6 @@
 from django.contrib.messages import get_messages
-from django.core.urlresolvers import reverse
 from django.test import TestCase
+from django.urls import reverse
 from django.utils import six
 
 from oscar.apps.basket import views
@@ -36,6 +36,27 @@ class TestVoucherAddView(TestCase):
 
         voucher = voucher.__class__.objects.get(pk=voucher.pk)
         self.assertEqual(voucher.num_basket_additions, 1, msg=self._get_voucher_message(request))
+
+    def test_post_valid_from_set(self):
+        voucherset = factories.VoucherSetFactory()
+        voucher = voucherset.vouchers.first()
+
+        self.assertTrue(voucher.is_active())
+
+        data = {
+            'code': voucher.code
+        }
+        request = RequestFactory().post('/', data=data)
+        request.basket.save()
+
+        view = views.VoucherAddView.as_view()
+        response = view(request)
+        self.assertEqual(response.status_code, 302)
+
+        voucher = voucher.__class__.objects.get(pk=voucher.pk)
+        self.assertEqual(voucher.num_basket_additions, 1, msg=self._get_voucher_message(request))
+
+        self.assertEqual(voucherset.num_basket_additions, 1)
 
 
 class TestVoucherRemoveView(TestCase):
